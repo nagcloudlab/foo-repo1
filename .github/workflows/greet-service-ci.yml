@@ -42,12 +42,6 @@ jobs:
       - name: API Tests
         run: mvn test -Dtest="GreetApiRestAssuredTest"
 
-      - name: Publish Test Results
-        uses: mikepenz/action-junit-report@v4
-        if: always()
-        with:
-          report_paths: greet-service/target/surefire-reports/TEST-*.xml
-
       - name: Package
         run: mvn package -DskipTests
 
