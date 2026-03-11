@@ -51,28 +51,15 @@ jobs:
           name: greet-service-jar
           path: greet-service/target/*.jar
 
-      - name: Publish to Nexus
+      - name: Create Maven Settings
         env:
           NEXUS_USER: ${{ secrets.NEXUS_USER }}
           NEXUS_PASS: ${{ secrets.NEXUS_PASS }}
-          NEXUS_URL: http://20.204.90.26:8081
         run: |
-          cat > settings.xml <<EOF
-          <settings>
-            <servers>
-              <server>
-                <id>nexus-snapshots</id>
-                <username>${NEXUS_USER}</username>
-                <password>${NEXUS_PASS}</password>
-              </server>
-              <server>
-                <id>nexus-releases</id>
-                <username>${NEXUS_USER}</username>
-                <password>${NEXUS_PASS}</password>
-              </server>
-            </servers>
-          </settings>
-          EOF
+          echo "<settings><servers><server><id>nexus-snapshots</id><username>${NEXUS_USER}</username><password>${NEXUS_PASS}</password></server><server><id>nexus-releases</id><username>${NEXUS_USER}</username><password>${NEXUS_PASS}</password></server></servers></settings>" > settings.xml
+
+      - name: Publish to Nexus
+        run: |
           mvn deploy -DskipTests -s settings.xml \
-            -DaltDeploymentRepository=nexus-snapshots::${NEXUS_URL}/repository/maven-snapshots/
+            -DaltDeploymentRepository=nexus-snapshots::http://20.204.90.26:8081/repository/maven-snapshots/
           rm -f settings.xml
