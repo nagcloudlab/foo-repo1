@@ -1,0 +1,81 @@
+name: Greet Service CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: greet-service
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build
+        run: mvn clean compile -DskipTests
+
+      - name: Unit Tests
+        run: mvn test -Dtest="GreetServiceTest"
+
+      - name: Integration Tests
+        run: mvn test -Dtest="GreetApiControllerIntegrationTest"
+
+      - name: API Tests
+        run: mvn test -Dtest="GreetApiRestAssuredTest"
+
+      - name: Publish Test Results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Test Results
+          path: greet-service/target/surefire-reports/*.xml
+          reporter: java-junit
+
+      - name: Package
+        run: mvn package -DskipTests
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: greet-service-jar
+          path: greet-service/target/*.jar
+
+      - name: Publish to Nexus
+        env:
+          NEXUS_USER: ${{ secrets.NEXUS_USER }}
+          NEXUS_PASS: ${{ secrets.NEXUS_PASS }}
+          NEXUS_URL: http://20.204.90.26:8081
+        run: |
+          cat > settings.xml <<EOF
+          <settings>
+            <servers>
+              <server>
+                <id>nexus-snapshots</id>
+                <username>${NEXUS_USER}</username>
+                <password>${NEXUS_PASS}</password>
+              </server>
+              <server>
+                <id>nexus-releases</id>
+                <username>${NEXUS_USER}</username>
+                <password>${NEXUS_PASS}</password>
+              </server>
+            </servers>
+          </settings>
+          EOF
+          mvn deploy -DskipTests -s settings.xml \
+            -DaltDeploymentRepository=nexus-snapshots::${NEXUS_URL}/repository/maven-snapshots/
+          rm -f settings.xml

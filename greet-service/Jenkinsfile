@@ -6,7 +6,7 @@ pipeline {
     //     jdk 'jdk17'
     //     maven 'maven3'
     // }
-
+   
     environment {
         SERVICE_DIR = 'greet-service'
         NEXUS_URL = 'http://localhost:8081'
