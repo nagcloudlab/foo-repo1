@@ -86,10 +86,25 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: "${NEXUS_CREDENTIAL_ID}", usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
                     dir("${SERVICE_DIR}") {
                         sh '''
-                            mvn deploy -DskipTests \
-                              -DaltDeploymentRepository=nexus-snapshots::default::${NEXUS_URL}/repository/maven-snapshots/ \
-                              -Dusername=${NEXUS_USER} \
-                              -Dpassword=${NEXUS_PASS}
+                            cat > settings.xml <<EOF
+<settings>
+  <servers>
+    <server>
+      <id>nexus-snapshots</id>
+      <username>${NEXUS_USER}</username>
+      <password>${NEXUS_PASS}</password>
+    </server>
+    <server>
+      <id>nexus-releases</id>
+      <username>${NEXUS_USER}</username>
+      <password>${NEXUS_PASS}</password>
+    </server>
+  </servers>
+</settings>
+EOF
+                            mvn deploy -DskipTests -s settings.xml \
+                              -DaltDeploymentRepository=nexus-snapshots::${NEXUS_URL}/repository/maven-snapshots/
+                            rm -f settings.xml
                         '''
                     }
                 }
