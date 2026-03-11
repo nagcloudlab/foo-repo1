@@ -1,0 +1,94 @@
+pipeline {
+    
+    agent any
+
+    // tools {
+    //     jdk 'jdk17'
+    //     maven 'maven3'
+    // }
+
+    environment {
+        SERVICE_DIR = 'greet-service'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            steps {
+                dir("${SERVICE_DIR}") {
+                    sh 'mvn clean compile -DskipTests'
+                }
+            }
+        }
+
+        stage('Unit Tests') {
+            steps {
+                dir("${SERVICE_DIR}") {
+                    sh 'mvn test -Dtest="GreetServiceTest"'
+                }
+            }
+            post {
+                always {
+                    junit "${SERVICE_DIR}/target/surefire-reports/*.xml"
+                }
+            }
+        }
+
+        stage('Integration Tests') {
+            steps {
+                dir("${SERVICE_DIR}") {
+                    sh 'mvn test -Dtest="GreetApiControllerIntegrationTest"'
+                }
+            }
+            post {
+                always {
+                    junit "${SERVICE_DIR}/target/surefire-reports/*.xml"
+                }
+            }
+        }
+
+        stage('API Tests') {
+            steps {
+                dir("${SERVICE_DIR}") {
+                    sh 'mvn test -Dtest="GreetApiRestAssuredTest"'
+                }
+            }
+            post {
+                always {
+                    junit "${SERVICE_DIR}/target/surefire-reports/*.xml"
+                }
+            }
+        }
+
+        stage('Package') {
+            steps {
+                dir("${SERVICE_DIR}") {
+                    sh 'mvn package -DskipTests'
+                }
+            }
+            post {
+                success {
+                    archiveArtifacts artifacts: "${SERVICE_DIR}/target/*.jar", fingerprint: true
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'CI pipeline completed successfully!'
+        }
+        failure {
+            echo 'CI pipeline failed!'
+        }
+        always {
+            // cleanWs()
+        }
+    }
+}
